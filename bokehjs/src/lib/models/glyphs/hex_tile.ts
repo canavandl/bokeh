@@ -13,6 +13,7 @@ import {HexTileOrientation} from "core/enums"
 import {generic_area_vector_legend} from "./utils"
 import {Selection} from "../selections/selection"
 import type {HexTileGL} from "./webgl/hex_tile"
+import type {HexTileGPU} from "./webgpu/hex_tile_gpu"
 
 export type Vertices = [number, number, number, number, number, number]
 
@@ -25,9 +26,17 @@ export class HexTileView extends GlyphView {
   /** @internal */
   declare glglyph?: HexTileGL
 
+  /** @internal */
+  declare gpuglyph?: HexTileGPU
+
   override async load_glglyph() {
     const {HexTileGL} = await import("./webgl/hex_tile")
     return HexTileGL
+  }
+
+  override async load_gpuglyph() {
+    const {HexTileGPU} = await import("./webgpu/hex_tile_gpu")
+    return HexTileGPU
   }
 
   scenterxy(i: number): [number, number] {
@@ -103,6 +112,9 @@ export class HexTileView extends GlyphView {
     // From overridden GlyphView.map_data()
     if (this.has_webgl()) {
       this.glglyph.set_data_mapped()
+    }
+    if (this.has_webgpu()) {
+      this.gpuglyph.set_data_mapped()
     }
   }
 
