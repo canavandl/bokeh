@@ -174,11 +174,19 @@ export class WebGPUWrapper {
       const shader_module = this.get_marker_shader_module()
       const bind_group_layout = this.get_marker_bind_group_layout()
 
-      // Constants for shader specialization
-      const constants: Record<string, number> = {
-        MARKER_CIRCLE: marker_type === "circle" ? 1 : 0,
-        MARKER_RECT: marker_type === "rect" ? 1 : 0,
-        MARKER_ROUND_RECT: marker_type === "round_rect" ? 1 : 0,
+      // Constants for shader specialization - must match override declarations in marker.wgsl
+      const all_marker_types = [
+        "asterisk", "circle", "circle_cross", "circle_dot", "circle_x", "circle_y",
+        "cross", "dash", "diamond", "diamond_cross", "diamond_dot", "dot",
+        "hex", "hex_dot", "inverted_triangle", "plus", "square", "square_cross",
+        "square_dot", "square_pin", "square_x", "star", "star_dot", "triangle",
+        "triangle_dot", "triangle_pin", "x", "y", "rect", "round_rect",
+      ]
+
+      const constants: Record<string, number> = {}
+      for (const mt of all_marker_types) {
+        const key_name = `MARKER_${mt.toUpperCase()}`
+        constants[key_name] = marker_type === mt ? 1 : 0
       }
 
       pipeline = this._device.createRenderPipeline({
