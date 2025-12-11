@@ -155,7 +155,14 @@ fn vertex_main(
     );
 
     // Transform size from data units to screen units
-    let screen_size = size_in.size * uniforms.radius_scale;
+    // For rect, width and height need separate x/y scaling
+    // For other markers, use uniform radius_scale
+    var screen_size: vec2f;
+    if (MARKER_RECT || MARKER_ROUND_RECT) {
+        screen_size = vec2f(size_in.size.x * abs(uniforms.x_scale), size_in.size.y * abs(uniforms.y_scale));
+    } else {
+        screen_size = size_in.size * uniforms.radius_scale;
+    }
 
     // Determine marker size based on type
     var v_size: vec2f;

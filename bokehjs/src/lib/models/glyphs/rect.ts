@@ -16,6 +16,7 @@ import {BorderRadius} from "../common/kinds"
 import * as resolve from "../common/resolve"
 import {round_rect} from "../common/painting"
 import type {RectGL} from "./webgl/rect"
+import type {RectGPU} from "./webgpu/rect"
 
 const {abs, sqrt} = Math
 
@@ -28,9 +29,17 @@ export class RectView extends CenterRotatableView {
   /** @internal */
   declare glglyph?: RectGL
 
+  /** @internal */
+  declare gpuglyph?: RectGPU
+
   override async load_glglyph() {
     const {RectGL} = await import("./webgl/rect")
     return RectGL
+  }
+
+  override async load_gpuglyph() {
+    const {RectGPU} = await import("./webgpu/rect")
+    return RectGPU
   }
 
   protected override _set_data(indices: number[] | null): void {
