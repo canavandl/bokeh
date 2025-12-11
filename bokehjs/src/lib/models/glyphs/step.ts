@@ -8,6 +8,7 @@ import {StepMode} from "core/enums"
 import type {Context2d} from "core/util/canvas"
 import {unreachable} from "core/util/assert"
 import type {StepGL} from "./webgl/step"
+import type {StepGPU} from "./webgpu/step_gpu"
 
 export interface StepView extends Step.Data {}
 
@@ -18,9 +19,17 @@ export class StepView extends XYGlyphView {
   /** @internal */
   declare glglyph?: StepGL
 
+  /** @internal */
+  declare gpuglyph?: StepGPU
+
   override async load_glglyph() {
     const {StepGL} = await import("./webgl/step")
     return StepGL
+  }
+
+  override async load_gpuglyph() {
+    const {StepGPU} = await import("./webgpu/step_gpu")
+    return StepGPU
   }
 
   protected _paint(ctx: Context2d, indices: number[], data?: Partial<Step.Data>): void {
