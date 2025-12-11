@@ -5,6 +5,7 @@ import line_shader from "./line.wgsl"
 import wedge_shader from "./wedge.wgsl"
 import annulus_shader from "./annulus.wgsl"
 import annular_wedge_shader from "./annular_wedge.wgsl"
+import ngon_shader from "./ngon.wgsl"
 
 // Singleton WebGPU wrapper instance
 let webgpu_wrapper: WebGPUWrapper | null = null
@@ -29,6 +30,7 @@ export class WebGPUWrapper {
   private _wedge_shader_module: GPUShaderModule | null = null
   private _annulus_shader_module: GPUShaderModule | null = null
   private _annular_wedge_shader_module: GPUShaderModule | null = null
+  private _ngon_shader_module: GPUShaderModule | null = null
 
   // Cached render pipelines
   private _marker_pipeline_cache: Map<string, GPURenderPipeline> = new Map()
@@ -36,6 +38,7 @@ export class WebGPUWrapper {
   private _wedge_pipeline: GPURenderPipeline | null = null
   private _annulus_pipeline: GPURenderPipeline | null = null
   private _annular_wedge_pipeline: GPURenderPipeline | null = null
+  private _ngon_pipeline: GPURenderPipeline | null = null
 
   // Static geometry buffers
   private _rect_geometry: GPUBuffer | null = null
@@ -46,6 +49,7 @@ export class WebGPUWrapper {
   private _wedge_bind_group_layout: GPUBindGroupLayout | null = null
   private _annulus_bind_group_layout: GPUBindGroupLayout | null = null
   private _annular_wedge_bind_group_layout: GPUBindGroupLayout | null = null
+  private _ngon_bind_group_layout: GPUBindGroupLayout | null = null
 
   // WebGPU state
   private _scissor: BoundingBox = {x: 0, y: 0, width: 0, height: 0}
@@ -909,6 +913,148 @@ export class WebGPUWrapper {
   create_annular_wedge_bind_group(uniform_buffer: GPUBuffer): GPUBindGroup {
     return this._device.createBindGroup({
       layout: this.get_annular_wedge_bind_group_layout(),
+      entries: [
+        {binding: 0, resource: {buffer: uniform_buffer}},
+      ],
+    })
+  }
+
+  // Get or create the ngon shader module
+  get_ngon_shader_module(): GPUShaderModule {
+    if (this._ngon_shader_module == null) {
+      this._ngon_shader_module = this._device.createShaderModule({
+        label: "Ngon Shader",
+        code: ngon_shader,
+      })
+    }
+    return this._ngon_shader_module
+  }
+
+  // Get the bind group layout for ngon rendering
+  get_ngon_bind_group_layout(): GPUBindGroupLayout {
+    if (this._ngon_bind_group_layout == null) {
+      this._ngon_bind_group_layout = this._device.createBindGroupLayout({
+        label: "Ngon Bind Group Layout",
+        entries: [
+          {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: {type: "uniform"},
+          },
+        ],
+      })
+    }
+    return this._ngon_bind_group_layout
+  }
+
+  // Get or create render pipeline for ngon
+  get_ngon_pipeline(): GPURenderPipeline {
+    if (this._ngon_pipeline == null) {
+      const shader_module = this.get_ngon_shader_module()
+      const bind_group_layout = this.get_ngon_bind_group_layout()
+
+      this._ngon_pipeline = this._device.createRenderPipeline({
+        label: "Ngon Pipeline",
+        layout: this._device.createPipelineLayout({
+          bindGroupLayouts: [bind_group_layout],
+        }),
+        vertex: {
+          module: shader_module,
+          entryPoint: "vertex_main",
+          buffers: [
+            // Buffer 0: Vertex buffer (quad geometry) - per-vertex
+            {
+              arrayStride: 2 * 4,
+              stepMode: "vertex",
+              attributes: [
+                {shaderLocation: 0, offset: 0, format: "float32x2"},
+              ],
+            },
+            // Buffer 1: Position (center) - per-instance
+            {
+              arrayStride: 2 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 1, offset: 0, format: "float32x2"},
+              ],
+            },
+            // Buffer 2: Radius - per-instance
+            {
+              arrayStride: 1 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 2, offset: 0, format: "float32"},
+              ],
+            },
+            // Buffer 3: Geometry (angle, n) - per-instance
+            {
+              arrayStride: 2 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 3, offset: 0, format: "float32x2"},
+              ],
+            },
+            // Buffer 4: Line properties - per-instance
+            {
+              arrayStride: 4 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 4, offset: 0, format: "float32x4"},
+              ],
+            },
+            // Buffer 5: Line color - per-instance
+            {
+              arrayStride: 4 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 5, offset: 0, format: "float32x4"},
+              ],
+            },
+            // Buffer 6: Fill color - per-instance
+            {
+              arrayStride: 4 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 6, offset: 0, format: "float32x4"},
+              ],
+            },
+          ],
+        },
+        fragment: {
+          module: shader_module,
+          entryPoint: "fragment_main",
+          targets: [
+            {
+              format: this._format,
+              blend: {
+                color: {
+                  srcFactor: "one",
+                  dstFactor: "one-minus-src-alpha",
+                  operation: "add",
+                },
+                alpha: {
+                  srcFactor: "one",
+                  dstFactor: "one-minus-src-alpha",
+                  operation: "add",
+                },
+              },
+            },
+          ],
+        },
+        primitive: {
+          topology: "triangle-strip",
+          stripIndexFormat: "uint32",
+        },
+      })
+    }
+
+    return this._ngon_pipeline
+  }
+
+  // Create a bind group for ngon rendering
+  create_ngon_bind_group(uniform_buffer: GPUBuffer): GPUBindGroup {
+    return this._device.createBindGroup({
+      layout: this.get_ngon_bind_group_layout(),
       entries: [
         {binding: 0, resource: {buffer: uniform_buffer}},
       ],
