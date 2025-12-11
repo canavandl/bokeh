@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>WebGPU Backend Demo</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .info {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        max-width: 1200px;
+      }
+      .info h3 {
+        margin-top: 0;
+      }
+      #plot {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="info">
+      <h3>WebGPU Backend Demo</h3>
+      <p>This example renders 5000 circles using three different backends:</p>
+      <ul>
+        <li><strong>Canvas:</strong> Standard 2D canvas rendering</li>
+        <li><strong>WebGL:</strong> GPU-accelerated via WebGL/ReGL</li>
+        <li><strong>WebGPU:</strong> Next-gen GPU API (experimental)</li>
+      </ul>
+      <p>Try zooming and panning to compare performance! Check the browser console for WebGPU availability status.</p>
+    </div>
+    <div id="plot"></div>
+    <script type="module" src="/static/examples/webgpu/webgpu.js"></script>
+  </body>
+</html>
