@@ -14,6 +14,7 @@ import type {Context2d} from "core/util/canvas"
 import {Selection} from "../selections/selection"
 import {max} from "../../core/util/arrayable"
 import type {WedgeGL} from "./webgl/wedge"
+import type {WedgeGPU} from "./webgpu/wedge_gpu"
 
 export interface WedgeView extends Wedge.Data {}
 
@@ -24,9 +25,17 @@ export class WedgeView extends XYGlyphView {
   /** @internal */
   declare glglyph?: WedgeGL
 
+  /** @internal */
+  declare gpuglyph?: WedgeGPU
+
   override async load_glglyph() {
     const {WedgeGL} = await import("./webgl/wedge")
     return WedgeGL
+  }
+
+  override async load_gpuglyph() {
+    const {WedgeGPU} = await import("./webgpu/wedge_gpu")
+    return WedgeGPU
   }
 
   protected override _index_data(index: SpatialIndex): void {
