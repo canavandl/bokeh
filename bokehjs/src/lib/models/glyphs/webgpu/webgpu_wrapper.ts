@@ -1,6 +1,7 @@
 import type {BoundingBox, GPUMarkerType} from "./types"
 import marker_shader from "./marker.wgsl"
 import accumulate_shader from "./accumulate.wgsl"
+import line_shader from "./line.wgsl"
 
 // Singleton WebGPU wrapper instance
 let webgpu_wrapper: WebGPUWrapper | null = null
@@ -21,15 +22,18 @@ export class WebGPUWrapper {
   // Cached shader modules
   private _marker_shader_module: GPUShaderModule | null = null
   private _accumulate_shader_module: GPUShaderModule | null = null
+  private _line_shader_module: GPUShaderModule | null = null
 
   // Cached render pipelines
   private _marker_pipeline_cache: Map<string, GPURenderPipeline> = new Map()
+  private _line_pipeline: GPURenderPipeline | null = null
 
   // Static geometry buffers
   private _rect_geometry: GPUBuffer | null = null
 
   // Bind group layouts
   private _marker_bind_group_layout: GPUBindGroupLayout | null = null
+  private _line_bind_group_layout: GPUBindGroupLayout | null = null
 
   // WebGPU state
   private _scissor: BoundingBox = {x: 0, y: 0, width: 0, height: 0}
@@ -326,6 +330,155 @@ export class WebGPUWrapper {
   create_marker_bind_group(uniform_buffer: GPUBuffer): GPUBindGroup {
     return this._device.createBindGroup({
       layout: this.get_marker_bind_group_layout(),
+      entries: [
+        {binding: 0, resource: {buffer: uniform_buffer}},
+      ],
+    })
+  }
+
+  // Get or create the line shader module
+  get_line_shader_module(): GPUShaderModule {
+    if (this._line_shader_module == null) {
+      this._line_shader_module = this._device.createShaderModule({
+        label: "Line Shader",
+        code: line_shader,
+      })
+    }
+    return this._line_shader_module
+  }
+
+  // Get the bind group layout for line rendering
+  get_line_bind_group_layout(): GPUBindGroupLayout {
+    if (this._line_bind_group_layout == null) {
+      this._line_bind_group_layout = this._device.createBindGroupLayout({
+        label: "Line Bind Group Layout",
+        entries: [
+          {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: {type: "uniform"},
+          },
+        ],
+      })
+    }
+    return this._line_bind_group_layout
+  }
+
+  // Get or create render pipeline for lines
+  get_line_pipeline(): GPURenderPipeline {
+    if (this._line_pipeline == null) {
+      const shader_module = this.get_line_shader_module()
+      const bind_group_layout = this.get_line_bind_group_layout()
+
+      this._line_pipeline = this._device.createRenderPipeline({
+        label: "Line Pipeline",
+        layout: this._device.createPipelineLayout({
+          bindGroupLayouts: [bind_group_layout],
+        }),
+        vertex: {
+          module: shader_module,
+          entryPoint: "vs_main",
+          buffers: [
+            // Buffer 0: Vertex buffer (quad geometry) - per-vertex
+            {
+              arrayStride: 2 * 4, // 2 floats * 4 bytes
+              stepMode: "vertex",
+              attributes: [
+                {shaderLocation: 0, offset: 0, format: "float32x2"}, // position
+              ],
+            },
+            // Buffer 1: Point prev - per-instance
+            {
+              arrayStride: 2 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 1, offset: 0, format: "float32x2"}, // point_prev
+              ],
+            },
+            // Buffer 2: Point start - per-instance
+            {
+              arrayStride: 2 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 2, offset: 0, format: "float32x2"}, // point_start
+              ],
+            },
+            // Buffer 3: Point end - per-instance
+            {
+              arrayStride: 2 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 3, offset: 0, format: "float32x2"}, // point_end
+              ],
+            },
+            // Buffer 4: Point next - per-instance
+            {
+              arrayStride: 2 * 4,
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 4, offset: 0, format: "float32x2"}, // point_next
+              ],
+            },
+            // Buffer 5: Show flags - per-instance
+            {
+              arrayStride: 4 * 4, // 4 floats (show_prev, show_curr, show_next, unused)
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 5, offset: 0, format: "float32x4"}, // show_flags
+              ],
+            },
+            // Buffer 6: Line properties - per-instance
+            {
+              arrayStride: 4 * 4, // 4 floats (linewidth, cap, join, unused)
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 6, offset: 0, format: "float32x4"}, // line_props
+              ],
+            },
+            // Buffer 7: Line color - per-instance
+            {
+              arrayStride: 4 * 4, // 4 floats (r, g, b, a)
+              stepMode: "instance",
+              attributes: [
+                {shaderLocation: 7, offset: 0, format: "float32x4"}, // line_color
+              ],
+            },
+          ],
+        },
+        fragment: {
+          module: shader_module,
+          entryPoint: "fs_main",
+          targets: [
+            {
+              format: this._format,
+              blend: {
+                color: {
+                  srcFactor: "one",
+                  dstFactor: "one-minus-src-alpha",
+                  operation: "add",
+                },
+                alpha: {
+                  srcFactor: "one",
+                  dstFactor: "one-minus-src-alpha",
+                  operation: "add",
+                },
+              },
+            },
+          ],
+        },
+        primitive: {
+          topology: "triangle-list",
+        },
+      })
+    }
+
+    return this._line_pipeline
+  }
+
+  // Create a bind group for line rendering
+  create_line_bind_group(uniform_buffer: GPUBuffer): GPUBindGroup {
+    return this._device.createBindGroup({
+      layout: this.get_line_bind_group_layout(),
       entries: [
         {binding: 0, resource: {buffer: uniform_buffer}},
       ],
