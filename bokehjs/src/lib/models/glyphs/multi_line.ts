@@ -11,6 +11,7 @@ import {Glyph, GlyphView} from "./glyph"
 import {generic_line_vector_legend, line_interpolation} from "./utils"
 import {Selection} from "../selections/selection"
 import type {MultiLineGL} from "./webgl/multi_line"
+import type {MultiLineGPU} from "./webgpu/multi_line_gpu"
 
 export interface MultiLineView extends MultiLine.Data {}
 
@@ -21,9 +22,17 @@ export class MultiLineView extends GlyphView {
   /** @internal */
   declare glglyph?: MultiLineGL
 
+  /** @internal */
+  declare gpuglyph?: MultiLineGPU
+
   override async load_glglyph() {
     const {MultiLineGL} = await import("./webgl/multi_line")
     return MultiLineGL
+  }
+
+  override async load_gpuglyph() {
+    const {MultiLineGPU} = await import("./webgpu/multi_line_gpu")
+    return MultiLineGPU
   }
 
   protected override _project_data(): void {
