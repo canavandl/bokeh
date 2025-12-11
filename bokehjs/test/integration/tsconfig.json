@@ -28,7 +28,7 @@
     "skipLibCheck": true,
     "target": "ES2022",
     "lib": ["esnext", "dom", "dom.iterable"],
-    "types": [],
+    "types": ["@webgpu/types"],
     "baseUrl": ".",
     "paths": {
       "@bokehjs/*": ["../../build/js/lib/*"]

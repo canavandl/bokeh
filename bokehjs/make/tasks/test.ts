@@ -120,6 +120,9 @@ async function headless(devtools_port: number): Promise<ChildProcess> {
     "--disable-font-subpixel-positioning",  // makes images look similar on all platform
     "--force-color-profile=srgb",           // ^^^
     "--force-device-scale-factor=1",        // ^^^
+    // WebGPU support flags
+    "--enable-unsafe-webgpu",               // enable WebGPU API
+    "--enable-features=WebGPU",             // enable WebGPU feature flag
   ]
   const bokeh_in_docker = process.env.BOKEH_IN_DOCKER ?? ""
   if (bokeh_in_docker == "1") {
