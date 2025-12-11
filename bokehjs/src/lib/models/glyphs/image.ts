@@ -4,6 +4,7 @@ import {LinearColorMapper} from "../mappers/linear_color_mapper"
 import type {NDArrayType} from "core/util/ndarray"
 import type * as p from "core/properties"
 import type {ImageGL} from "./webgl/image"
+import type {ImageGPU} from "./webgpu/image_gpu"
 
 export interface ImageView extends Image.Data {}
 
@@ -14,9 +15,17 @@ export class ImageView extends ImageBaseView {
   /** @internal */
   declare glglyph?: ImageGL
 
+  /** @internal */
+  declare gpuglyph?: ImageGPU
+
   override async load_glglyph() {
     const {ImageGL} = await import("./webgl/image")
     return ImageGL
+  }
+
+  override async load_gpuglyph() {
+    const {ImageGPU} = await import("./webgpu/image_gpu")
+    return ImageGPU
   }
 
   override connect_signals(): void {
@@ -27,6 +36,9 @@ export class ImageView extends ImageBaseView {
   protected _update_image(): void {
     if (this.has_webgl()) {
       this.glglyph.set_image_changed()
+    }
+    if (this.has_webgpu()) {
+      this.gpuglyph.set_image_changed()
     }
 
     // Only reset image_data if already initialized

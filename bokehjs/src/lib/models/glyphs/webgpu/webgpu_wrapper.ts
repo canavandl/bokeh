@@ -7,6 +7,7 @@ import annulus_shader from "./annulus.wgsl"
 import annular_wedge_shader from "./annular_wedge.wgsl"
 import ngon_shader from "./ngon.wgsl"
 import hex_tile_shader from "./hex_tile.wgsl"
+import image_shader from "./image.wgsl"
 
 // Singleton WebGPU wrapper instance
 let webgpu_wrapper: WebGPUWrapper | null = null
@@ -33,6 +34,7 @@ export class WebGPUWrapper {
   private _annular_wedge_shader_module: GPUShaderModule | null = null
   private _ngon_shader_module: GPUShaderModule | null = null
   private _hex_tile_shader_module: GPUShaderModule | null = null
+  private _image_shader_module: GPUShaderModule | null = null
 
   // Cached render pipelines
   private _marker_pipeline_cache: Map<string, GPURenderPipeline> = new Map()
@@ -42,6 +44,7 @@ export class WebGPUWrapper {
   private _annular_wedge_pipeline: GPURenderPipeline | null = null
   private _ngon_pipeline: GPURenderPipeline | null = null
   private _hex_tile_pipeline: GPURenderPipeline | null = null
+  private _image_pipeline: GPURenderPipeline | null = null
 
   // Static geometry buffers
   private _rect_geometry: GPUBuffer | null = null
@@ -54,6 +57,7 @@ export class WebGPUWrapper {
   private _annular_wedge_bind_group_layout: GPUBindGroupLayout | null = null
   private _ngon_bind_group_layout: GPUBindGroupLayout | null = null
   private _hex_tile_bind_group_layout: GPUBindGroupLayout | null = null
+  private _image_bind_group_layout: GPUBindGroupLayout | null = null
 
   // WebGPU state
   private _scissor: BoundingBox = {x: 0, y: 0, width: 0, height: 0}
@@ -1195,6 +1199,112 @@ export class WebGPUWrapper {
       layout: this.get_hex_tile_bind_group_layout(),
       entries: [
         {binding: 0, resource: {buffer: uniform_buffer}},
+      ],
+    })
+  }
+
+  // Get or create the image shader module
+  get_image_shader_module(): GPUShaderModule {
+    if (this._image_shader_module == null) {
+      this._image_shader_module = this._device.createShaderModule({
+        label: "Image Shader",
+        code: image_shader,
+      })
+    }
+    return this._image_shader_module
+  }
+
+  // Get the bind group layout for image rendering
+  get_image_bind_group_layout(): GPUBindGroupLayout {
+    if (this._image_bind_group_layout == null) {
+      this._image_bind_group_layout = this._device.createBindGroupLayout({
+        label: "Image Bind Group Layout",
+        entries: [
+          {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: {type: "uniform"},
+          },
+          {
+            binding: 1,
+            visibility: GPUShaderStage.FRAGMENT,
+            texture: {sampleType: "float"},
+          },
+          {
+            binding: 2,
+            visibility: GPUShaderStage.FRAGMENT,
+            sampler: {type: "filtering"},
+          },
+        ],
+      })
+    }
+    return this._image_bind_group_layout
+  }
+
+  // Get or create render pipeline for image
+  get_image_pipeline(): GPURenderPipeline {
+    if (this._image_pipeline == null) {
+      const shader_module = this.get_image_shader_module()
+      const bind_group_layout = this.get_image_bind_group_layout()
+
+      this._image_pipeline = this._device.createRenderPipeline({
+        label: "Image Pipeline",
+        layout: this._device.createPipelineLayout({
+          bindGroupLayouts: [bind_group_layout],
+        }),
+        vertex: {
+          module: shader_module,
+          entryPoint: "vertex_main",
+          buffers: [
+            // Buffer 0: Vertex buffer (quad geometry) - per-vertex
+            {
+              arrayStride: 2 * 4,
+              stepMode: "vertex",
+              attributes: [
+                {shaderLocation: 0, offset: 0, format: "float32x2"},
+              ],
+            },
+          ],
+        },
+        fragment: {
+          module: shader_module,
+          entryPoint: "fragment_main",
+          targets: [
+            {
+              format: this._format,
+              blend: {
+                color: {
+                  srcFactor: "one",
+                  dstFactor: "one-minus-src-alpha",
+                  operation: "add",
+                },
+                alpha: {
+                  srcFactor: "one",
+                  dstFactor: "one-minus-src-alpha",
+                  operation: "add",
+                },
+              },
+            },
+          ],
+        },
+        primitive: {
+          topology: "triangle-strip",
+          stripIndexFormat: "uint32",
+        },
+      })
+    }
+
+    return this._image_pipeline
+  }
+
+  // Create a bind group for image rendering
+  create_image_bind_group(uniform_buffer: GPUBuffer, texture_view: GPUTextureView, sampler: GPUSampler): GPUBindGroup {
+    return this._device.createBindGroup({
+      layout: this.get_image_bind_group_layout(),
+      entries: [
+        {binding: 0, resource: {buffer: uniform_buffer}},
+        {binding: 1, resource: texture_view},
+        {binding: 2, resource: sampler},
       ],
     })
   }
