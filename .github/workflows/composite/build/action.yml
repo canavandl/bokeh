@@ -23,6 +23,14 @@ runs:
       run: |
         conda env update -q -n bk-test -f conda/environment-build.yml
 
+    - name: Cache npm dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('bokehjs/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-
+
     - name: Install node modules
       shell: bash -l {0}
       run: bash scripts/ci/install_node_modules.sh
