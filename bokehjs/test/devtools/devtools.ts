@@ -9,10 +9,11 @@ import chalk from "chalk"
 import yargs from "yargs"
 import {Bar, Presets} from "cli-progress"
 
-import type {Box, State} from "./baselines.js"
 import {create_baseline, diff_baseline, load_baselines} from "./baselines.js"
 import {diff_image} from "./image.js"
 import {platform} from "./sys.js"
+import type {CallFrame, Err, Suite, Test, Result, TestRunContext, Version} from "./types.js"
+import {Exit, TimeoutError} from "./types.js"
 
 const MAX_INT32 = 2147483647
 export class Random {
@@ -83,33 +84,6 @@ const argv = yargs(process.argv.slice(2)).options({
 const {host, port, ref, randomize, seed, pedantic, keyword, grep, screenshot, retry, info} = argv
 const url = argv._[0] as string | undefined ?? "about:blank"
 
-interface CallFrame {
-  name: string
-  url: string
-  line: number
-  col: number
-}
-
-interface Err {
-  text: string
-  url: string
-  line: number
-  col: number
-  trace: CallFrame[]
-}
-
-class Exit extends Error {
-  constructor(public code: number) {
-    super(`exit: ${code}`)
-  }
-}
-
-class TimeoutError extends Error {
-  constructor() {
-    super("timeout")
-  }
-}
-
 function timeout(ms: number): Promise<void> {
   return new Promise((_resolve, reject) => {
     const timer = setTimeout(() => reject(new TimeoutError()), ms)
@@ -119,15 +93,6 @@ function timeout(ms: number): Promise<void> {
 
 function encode(s: string): string {
   return s.replace(/[ \/\[\]:]/g, "_")
-}
-
-type Suite = {description: string, suites: Suite[], tests: Test[]}
-type Test = {description: string, skip: boolean, omit?: boolean, threshold?: number, retries?: number, dpr?: number, scale?: number, no_image?: boolean}
-
-type Result = {error: {str: string, stack?: string} | null, time: number, state?: State, bbox?: Box}
-
-type TestRunContext = {
-  chromium_version: number
 }
 
 async function run_tests(ctx: TestRunContext): Promise<boolean> {
@@ -837,7 +802,6 @@ async function get_version(): Promise<{browser: string, protocol: string}> {
   }
 }
 
-type Version = [number, number, number, number]
 const supported_chromium_version: Version = [141, 0, 7390, 54]
 
 function get_version_tuple(version: string): Version | null {
