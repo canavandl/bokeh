@@ -9,13 +9,15 @@ import chalk from "chalk"
 import yargs from "yargs"
 import {Bar, Presets} from "cli-progress"
 
+import type {State} from "./baselines.js"
 import {create_baseline, diff_baseline, load_baselines} from "./baselines.js"
 import {diff_image} from "./image.js"
 import {platform} from "./sys.js"
 import type {CallFrame, Err, Suite, Test, Result, TestRunContext} from "./types.js"
-import {Exit} from "./types.js"
+import {Exit, TimeoutError} from "./types.js"
 import {Random, shuffle, timeout, encode} from "./utils.js"
 import {get_version, get_version_tuple, check_version} from "./version.js"
+import {descriptions, description, show_tree} from "./format.js"
 
 export {Random} from "./utils.js"
 
@@ -241,32 +243,12 @@ async function run_tests(ctx: TestRunContext): Promise<boolean> {
         }
       }
 
-      function descriptions(suites: Suite[], test: Test): string[] {
-        return [...suites, test].map((obj) => obj.description)
-      }
-
-      function description(suites: Suite[], test: Test, sep: string = " "): string {
-        return descriptions(suites, test).join(sep)
-      }
-
       const all_tests = [...iter(top_level)]
 
       if (randomize) {
         const random = new Random(seed)
         console.log(`randomizing with seed ${seed}`)
         shuffle(all_tests, random)
-      }
-
-      function show_tree(suites: Suite[], test: Test): string[] {
-        const output = []
-        let depth = 0
-        for (const suite of [...suites, test]) {
-          const is_last = depth == suites.length
-          const prefix = depth == 0 ? chalk.red("\u2717") : `${" ".repeat(depth)}\u2514${is_last ? "\u2500" : "\u252c"}\u2500`
-          output.push(`${prefix} ${suite.description}`)
-          depth++
-        }
-        return output
       }
 
       const invalid_chars = ['"']

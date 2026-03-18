@@ -15,6 +15,7 @@ export interface Err {
   trace: CallFrame[]
 }
 
+// Error classes are defined here alongside types for cohesion
 export class Exit extends Error {
   constructor(public code: number) {
     super(`exit: ${code}`)
