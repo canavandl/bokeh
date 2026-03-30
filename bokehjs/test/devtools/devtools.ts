@@ -11,7 +11,7 @@ import {platform} from "./sys.js"
 import type {Suite, Test, TestRunContext} from "./types.js"
 import {Exit} from "./types.js"
 import {encode} from "./utils.js"
-import {get_version, get_version_tuple, check_version} from "./version.js"
+import {get_version_tuple, check_version} from "./version.js"
 import {descriptions, description, show_tree} from "./format.js"
 import {BrowserManager, Value, Failure} from "./browser.js"
 import {TestDiscovery, type TestCase} from "./discovery.js"
@@ -324,7 +324,7 @@ async function run_tests(ctx: TestRunContext): Promise<boolean> {
 }
 
 async function run(): Promise<void> {
-  const {browser, protocol} = await get_version(port)
+  const {browser, protocol} = await BrowserManager.get_version(port, host)
   console.log(`Running in ${chalk.cyan(browser)} using devtools protocol ${chalk.cyan(protocol)}`)
   const version = get_version_tuple(browser)
   check_version(version)

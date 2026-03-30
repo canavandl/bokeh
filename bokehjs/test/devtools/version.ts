@@ -1,17 +1,8 @@
-import CDP from "chrome-remote-interface"
 import chalk from "chalk"
 
 import type {Version} from "./types.js"
 
 export const supported_chromium_version: Version = [141, 0, 7390, 54]
-
-export async function get_version(port: number): Promise<{browser: string, protocol: string}> {
-  const version = await CDP.Version({port})
-  return {
-    browser: version.Browser,
-    protocol: version["Protocol-Version"],
-  }
-}
 
 export function get_version_tuple(version: string): Version | null {
   const match = version.match(/(\d+)\.(\d+)\.(\d+)\.(\d+)/)

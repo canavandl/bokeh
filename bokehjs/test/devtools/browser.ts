@@ -41,6 +41,18 @@ export class BrowserManager {
   private entries: LogEntry[] = []
   private exceptions: Exception[] = []
 
+  /**
+   * Gets browser version information without establishing a full connection.
+   * This is a static method that can be called before creating a BrowserManager instance.
+   */
+  static async get_version(port: number, host: string = "localhost"): Promise<{browser: string, protocol: string}> {
+    const version = await CDP.Version({port, host})
+    return {
+      browser: version.Browser,
+      protocol: version["Protocol-Version"],
+    }
+  }
+
   async connect(port: number, host: string = "localhost"): Promise<void> {
     this.client = await CDP({port, host})
     const {Emulation, Network, Browser, Page, DOM, Runtime, Log, Performance} = this.client
